@@ -19,22 +19,21 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Gradle System Tool
-      run: sudo apt-get update && sudo apt-get install -y gradle
+    - name: Generate Gradle Wrapper
+      run: gradle wrapper
 
-    # Este paso nos mostrará qué carpetas y archivos tienes en el repositorio
-    - name: Ver estructura de carpetas
-      run: ls -R
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
     - name: Generate debug keystore
       run: keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-    - name: Build Debug APK with Gradle
-      run: gradle assembleDebug
+    - name: Build Debug APK with Gradle Wrapper
+      run: ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug-apk
-        path: build/outputs/apk/debug/app-debug.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
         
