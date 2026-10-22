@@ -3,8 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,26 +13,34 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 1. Configurar Java 17 (Requerido por Gradle 9 y AGP 9)
+    # 1. Configurar Java 17
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    # 2. Dar permisos de ejecución a Gradle Wrapper
+    # 2. Instalar Gradle en el servidor para poder generar el wrapper faltante
+    - name: Install Gradle
+      run: sudo apt-get update && sudo apt-get install -y gradle
+
+    # 3. Generar el archivo gradlew automáticamente en el proyecto
+    - name: Generate Gradle Wrapper
+      run: gradle wrapper
+
+    # 4. Dar permisos de ejecución al gradlew recién creado
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # 3. Solucionar el problema del debug.keystore faltante generando uno temporal
+    # 5. Generar la llave de firmar temporal (debug.keystore)
     - name: Generate debug keystore
       run: keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-    # 4. Compilar el APK en modo Debug
+    # 6. Compilar el APK en modo Debug
     - name: Build Debug APK with Gradle
       run: ./gradlew assembleDebug
 
-    # 5. Subir el APK generado para que puedas descargarlo desde GitHub
+    # 7. Subir el APK generado como artefacto para descargarlo
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
