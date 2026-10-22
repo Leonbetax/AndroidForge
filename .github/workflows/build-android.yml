@@ -22,8 +22,17 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Generate debug keystore and build APK
+    - name: Build APK inside project directory
       run: |
+        # Listar contenido para verificar dónde están los archivos y entrar a la carpeta interna si existe
+        ls -la
+        
+        # Si existe una subcarpeta con los archivos, entramos en ella (ajusta si es necesario, o buscamos el build.gradle.kts)
+        cd $(find . -name "build.gradle.kts" -maxdepth 2 | head -n 1 | xargs dirname)
+        
+        echo "Directorio actual de compilación:"
+        pwd
+        
         keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         gradle :app:assembleDebug
 
@@ -31,5 +40,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-debug-apk
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: '**/build/outputs/apk/debug/app-debug.apk'
         
