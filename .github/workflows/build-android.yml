@@ -22,17 +22,25 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Build APK inside project directory
+    - name: Locate project and build APK
       run: |
-        # Listar contenido para verificar dónde están los archivos y entrar a la carpeta interna si existe
-        ls -la
+        echo "Buscando dónde está el proyecto Android..."
+        # Buscar la ruta exacta del archivo settings.gradle o settings.gradle.kts
+        PROJECT_PATH=$(find . -name "settings.gradle*" -not -path "*/.*" | head -n 1)
         
-        # Si existe una subcarpeta con los archivos, entramos en ella (ajusta si es necesario, o buscamos el build.gradle.kts)
-        cd $(find . -name "build.gradle.kts" -maxdepth 2 | head -n 1 | xargs dirname)
+        if [ -z "$PROJECT_PATH" ]; then
+          echo "¡Error crítico! No se encontró ningún archivo settings.gradle en el repositorio."
+          exit 1
+        fi
         
-        echo "Directorio actual de compilación:"
-        pwd
+        # Obtener solo el directorio de la ruta encontrada
+        PROJECT_DIR=$(dirname "$PROJECT_PATH")
+        echo "¡Proyecto encontrado en la carpeta: $PROJECT_DIR"
         
+        # Entrar a esa carpeta
+        cd "$PROJECT_DIR"
+        
+        # Generar keystore y compilar
         keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         gradle :app:assembleDebug
 
