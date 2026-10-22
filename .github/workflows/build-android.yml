@@ -20,27 +20,31 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    # 2. Instalar Gradle en el servidor para poder generar el wrapper faltante
-    - name: Install Gradle
-      run: sudo apt-get update && sudo apt-get install -y gradle
+    # 2. Forzar la versión correcta de Gradle que usa tu proyecto (Gradle 9.3.1) en el wrapper
+    - name: Configure Gradle Wrapper Version
+      run: |
+        mkdir -p gradle/wrapper
+        echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+        echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        echo "distributionUrl=https\://services.gradle.org/distributions/gradle-9.3.1-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+        echo "networkTimeout=10000" >> gradle/wrapper/gradle-wrapper.properties
+        echo "validateDistributionUrl=true" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
 
-    # 3. Generar el archivo gradlew automáticamente en el proyecto
-    - name: Generate Gradle Wrapper
-      run: gradle wrapper
-
-    # 4. Dar permisos de ejecución al gradlew recién creado
+    # 3. Dar permisos de ejecución a gradlew
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # 5. Generar la llave de firmar temporal (debug.keystore)
+    # 4. Generar la llave de firmar temporal (debug.keystore)
     - name: Generate debug keystore
       run: keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-    # 6. Compilar el APK en modo Debug
+    # 5. Compilar el APK en modo Debug con Gradle moderno
     - name: Build Debug APK with Gradle
       run: ./gradlew assembleDebug
 
-    # 7. Subir el APK generado como artefacto para descargarlo
+    # 6. Subir el APK generado como artefacto
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
