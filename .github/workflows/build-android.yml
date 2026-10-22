@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK from ZIP
 
 on:
   push:
@@ -22,27 +22,38 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Locate project and build APK
+    - name: Extract ZIP and Build APK
       run: |
-        echo "Buscando dónde está el proyecto Android..."
-        # Buscar la ruta exacta del archivo settings.gradle o settings.gradle.kts
-        PROJECT_PATH=$(find . -name "settings.gradle*" -not -path "*/.*" | head -n 1)
+        echo "Buscando el archivo ZIP en la carpeta input..."
+        ls -la input/
         
-        if [ -z "$PROJECT_PATH" ]; then
-          echo "¡Error crítico! No se encontró ningún archivo settings.gradle en el repositorio."
-          exit 1
+        # Crear una carpeta de trabajo y descomprimir el zip del usuario
+        mkdir -p working_project
+        unzip -q input/stickman-flow.zip -d working_project/
+        
+        # Entrar a la carpeta descomprimida
+        cd working_project/
+        
+        # Si el zip contiene una carpeta contenedora, entramos en ella si es necesario
+        # Verificamos dónde quedó el settings.gradle o build.gradle.kts
+        PROJECT_DIR=$(find . -name "settings.gradle*" -not -path "*/.*" | head -n 1 | xargs dirname)
+        if [ ! -z "$PROJECT_DIR" ] && [ "$PROJECT_DIR" != "." ]; then
+          cd "$PROJECT_DIR"
         fi
         
-        # Obtener solo el directorio de la ruta encontrada
-        PROJECT_DIR=$(dirname "$PROJECT_PATH")
-        echo "¡Proyecto encontrado en la carpeta: $PROJECT_DIR"
-        
-        # Entrar a esa carpeta
-        cd "$PROJECT_DIR"
+        echo "Directorio de compilación final:"
+        pwd
         
         # Generar keystore y compilar
         keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-        gradle :app:assembleDebug
+        
+        # Verificar si existe gradlew o usar gradle directamente
+        if [ -f "./gradlew" ]; then
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug
+        else
+          gradle :app:assembleDebug
+        fi
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
