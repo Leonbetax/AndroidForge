@@ -19,19 +19,23 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    # Usamos la acción oficial de Gradle que busca automáticamente el archivo settings.gradle.kts sin importar dónde esté ubicado
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Generate debug keystore
-      run: keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-
-    - name: Build Debug APK with Gradle
-      run: gradle :app:assembleDebug
+    - name: Find project root and build
+      run: |
+        # Buscar dónde está el archivo de configuración de Gradle en el repositorio
+        PROJECT_DIR=$(find . -name "settings.gradle.kts" -o -name "settings.gradle" | head -n 1 | xargs dirname)
+        echo "Directorio del proyecto encontrado: $PROJECT_DIR"
+        cd "$PROJECT_DIR"
+        
+        # Generar keystore y compilar dentro de la carpeta correcta
+        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        gradle :app:assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug-apk
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: '**/build/outputs/apk/debug/app-debug.apk'
         
